@@ -97,7 +97,6 @@ func configureStreamCommand(app *kingpin.Application) {
 		f.Flag("max-msg-size", "Maximum size any 1 message may be").Int64Var(&c.maxMsgSize)
 		f.Flag("json", "Produce JSON output").Short('j').BoolVar(&c.json)
 		f.Flag("dupe-window", "Window size for duplicate tracking").Default("").StringVar(&c.dupeWindow)
-		f.Flag("replicas", "When clustered, how many replicas of the data to create").Int64Var(&c.replicas)
 	}
 
 	str := app.Command("stream", "JetStream Stream management").Alias("str").Alias("st").Alias("ms").Alias("s")
@@ -107,6 +106,7 @@ func configureStreamCommand(app *kingpin.Application) {
 	strAdd.Flag("config", "JSON file to read configuration from").ExistingFileVar(&c.inputFile)
 	strAdd.Flag("validate", "Only validates the configuration against the official Schema").BoolVar(&c.validateOnly)
 	strAdd.Flag("output", "Save configuration instead of creating").PlaceHolder("FILE").StringVar(&c.outFile)
+	strAdd.Flag("replicas", "When clustered, how many replicas of the data to create").Int64Var(&c.replicas)
 	addCreateFlags(strAdd)
 
 	strEdit := str.Command("edit", "Edits an existing stream").Action(c.editAction)
@@ -135,6 +135,7 @@ func configureStreamCommand(app *kingpin.Application) {
 	strCopy := str.Command("copy", "Creates a new Stream based on the configuration of another").Alias("cp").Action(c.cpAction)
 	strCopy.Arg("source", "Source Stream to copy").Required().StringVar(&c.stream)
 	strCopy.Arg("destination", "New Stream to create").Required().StringVar(&c.destination)
+	strCopy.Flag("replicas", "When clustered, how many replicas of the data to create").Int64Var(&c.replicas)
 	addCreateFlags(strCopy)
 
 	strGet := str.Command("get", "Retrieves a specific message from a Stream").Action(c.getAction)
@@ -178,6 +179,7 @@ func configureStreamCommand(app *kingpin.Application) {
 	strTAdd := strTemplate.Command("create", "Creates a new Stream Template").Alias("add").Alias("new").Action(c.streamTemplateAdd)
 	strTAdd.Arg("stream", "Template name").StringVar(&c.stream)
 	strTAdd.Flag("max-streams", "Maximum amount of streams that this template can generate").Default("-1").IntVar(&c.maxStreams)
+	strTAdd.Flag("replicas", "When clustered, how many replicas of the data to create").Int64Var(&c.replicas)
 	addCreateFlags(strTAdd)
 
 	strTInfo := strTemplate.Command("info", "Stream Template information").Alias("nfo").Alias("i").Action(c.streamTemplateInfo)
@@ -667,10 +669,6 @@ func (c *streamCmd) copyAndEditStream(cfg api.StreamConfig) (api.StreamConfig, e
 			return api.StreamConfig{}, fmt.Errorf("invalid duplicate window: %v", err)
 		}
 		cfg.Duplicates = dw
-	}
-
-	if c.replicas != 0 {
-		cfg.Replicas = int(c.replicas)
 	}
 
 	return cfg, nil
